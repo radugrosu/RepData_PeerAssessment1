@@ -1,48 +1,41 @@
----
-output:
-  html_document:
-    fig_caption: yes
-    keep_md: yes
-    theme: readable
----
 
 
-```{r setup, include=FALSE}
-fn = local({
-  i = 0
-  function(x) {
-    i <<- i + 1
-    paste('Figure ', i, ': ', x, sep = '')
-  }
-})
-```
+
 
 # Reproducible Research: Peer Assessment 1
 
 ## Loading and preprocessing the data
 Load the necessary libraries:
-```{r}
+
+```r
 library(ggplot2)
 library(plyr)
 ```
 
 Read in the dataset:
-```{r}
+
+```r
 unzip('activity.zip', "activity.csv")
 amd = read.csv("activity.csv", as.is=TRUE)
 amd = transform(amd, date=as.Date(date))
 if (file.exists("activity.csv")) file.remove("activity.csv")
 ```
 
+```
+## [1] TRUE
+```
+
 
 ## What is the mean total number of steps taken per day?
-```{r}
+
+```r
 ats = ddply(amd[complete.cases(amd),], .(date), summarize, 
             daily_steps=sum(steps))
 ```
 
 Histogram of the total number of steps taken each day:
-```{r fig.height=3, fig.cap=fn("Total number of steps taken each day")}
+
+```r
 ggplot(ats, aes(x=daily_steps)) + 
     geom_histogram(binwidth=2000, colour="white", alpha=0.8) +
     geom_vline(xintercept=median(ats$daily_steps)) + 
@@ -50,15 +43,19 @@ ggplot(ats, aes(x=daily_steps)) +
     xlab("daily steps")
 ```
 
+![Figure 1: Total number of steps taken each day](./PA1_template_files/figure-html/unnamed-chunk-4.png) 
+
 The mean and median total number of steps taken per day are
-`r sprintf("%.1f", mean(ats$daily_steps))` and 
-`r sprintf("%.1f", median(ats$daily_steps))`, respectively.
+10766.2 and 
+10765.0, respectively.
+```
 
 ## What is the average daily activity pattern?
 
 Time series plot of the 5-minute interval (x-axis) and
 the average number of steps taken, averaged across all days (y-axis)
-```{r fig.height=3, fig.cap=fn("Daily activity pattern")}
+
+```r
 ai = ddply(amd, .(interval), summarize, imean = mean(steps, na.rm=TRUE))
 imax = ai[which.max(ai$imean), 1]; amax = max(ai$imean)
 ggplot(ai, aes(x=interval, y=imean)) + 
@@ -69,21 +66,34 @@ ggplot(ai, aes(x=interval, y=imean)) +
     scale_x_continuous(breaks=sort(c(seq(0, max(ai$interval), by=500), imax)))
 ```
 
+![Figure 2: Daily activity pattern](./PA1_template_files/figure-html/unnamed-chunk-5.png) 
+
 The average number of steps across all the days in the dataset, 
 is maximum for the following 5-minute interval:
-```{r}
+
+```r
 ai[which.max(ai$imean), 1]
+```
+
+```
+## [1] 835
 ```
 
 ## Imputing missing values
 The total number of missing values in the dataset:
-```{r}
+
+```r
 sum(complete.cases(amd))
+```
+
+```
+## [1] 15264
 ```
 
 The missing values are imputed using the median across all 5-minute intervals
 of the same denomination
-```{r}
+
+```r
 amdi = ddply(amd, .(interval), transform, 
              isteps=ifelse(is.na(steps), median(steps, na.rm=TRUE), steps))
 
@@ -91,7 +101,8 @@ atsi = ddply(amdi, .(date), summarize, daily_steps=sum(isteps))
 ```
 
 Histogram of the total number of steps taken each day:
-```{r fig.height=3, fig.cap=fn("Total number of steps taken each day (imputed data)")}
+
+```r
 mdn2 = median(atsi$daily_steps); avg2 = mean(atsi$daily_steps)
 ggplot(atsi, aes(x=daily_steps)) + 
     geom_histogram(binwidth=2000, colour="white", alpha=0.8) + 
@@ -103,7 +114,9 @@ ggplot(atsi, aes(x=daily_steps)) +
     xlab("daily steps")
 ```
 
-Both the mean (`r sprintf("%.1f", avg2)`) and median (`r sprintf("%.1f", mdn2)`) total number of steps taken per day are lower for the imputed dataset and wider apart.
+![Figure 3: Total number of steps taken each day (imputed data)](./PA1_template_files/figure-html/unnamed-chunk-9.png) 
+
+Both the mean (9503.9) and median (10395.0) total number of steps taken per day are lower for the imputed dataset and wider apart.
 
 
 
@@ -111,22 +124,27 @@ Both the mean (`r sprintf("%.1f", avg2)`) and median (`r sprintf("%.1f", mdn2)`)
 
 Add a new factor variable to the imputed dataset. It has two levels - "weekday" 
 and "weekend", indicating wether a given date is a weekday or weekend day.
-```{r}
+
+```r
 amdi$weekday = factor(ifelse(weekdays(amdi$date) %in% c("Saturday", "Sunday"), 
                       "weekday", "weekend"))
 ```
 
-```{r}
+
+```r
 aii = ddply(amdi, .(interval, weekday), summarize, imean = mean(isteps))
-``` 
+```
 
 Panel plot containing a time series plot of the 5-minute interval (x-axis) and 
 the average number of steps taken, averaged across all weekdays or 
 weekend days (y-axis)
-```{r  fig.cap=fn("Daily activity pattern by daytype")}
+
+```r
 ggplot(aii, aes(x=interval, y=imean)) + 
     facet_wrap(~weekday, nrow=2) + 
     geom_area(color=NA, fill="lightblue")+
     geom_line()+
     ylab("Average number of steps")
 ```
+
+![Figure 4: Daily activity pattern by daytype](./PA1_template_files/figure-html/unnamed-chunk-12.png) 
